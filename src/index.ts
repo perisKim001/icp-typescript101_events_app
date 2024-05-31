@@ -16,8 +16,7 @@ import {
   Opt,
 } from "azle";
 
-//user registration record
-
+// User registration record
 const User = Record({
   id: Principal,
   createdAt: nat64,
@@ -26,8 +25,7 @@ const User = Record({
 });
 type User = typeof User.tsType;
 
-//events record
-
+// Event record
 const Event = Record({
   id: Principal,
   eventPoster: text,
@@ -41,8 +39,7 @@ const Event = Record({
 });
 type Event = typeof Event.tsType;
 
-//payload section
-
+// Payloads
 const EventsPayload = Record({
   eventPoster: text,
   nameOfEvent: text,
@@ -51,62 +48,59 @@ const EventsPayload = Record({
   owner: text,
   date: text,
 });
-const bookEventPayload = Record({
+const BookEventPayload = Record({
   user: text,
   eventName: text,
 });
-const deleteProfilePayload = Record({
+const DeleteProfilePayload = Record({
   owner: text,
 });
-const profilePayLoad = Record({
+const ProfilePayload = Record({
   user: text,
 });
-const registerUserPayload = Record({
+const RegisterUserPayload = Record({
   username: text,
 });
-const upadteUserProfilePayload = Record({
+const UpdateUserProfilePayload = Record({
   userName: text,
   newUserName: text,
 });
-const getEventPayload = Record({
+const GetEventPayload = Record({
   nameOfEvent: text,
 });
-
-//events errors
-
-const EventsError = Variant({
-  EventDoesNotExist: text,
-  UserDoesNotExist: text,
-  EnterCorrectDetais: text,
-  EventNameIsRequired: text,
-  MustBeOwner: text,
-});
-const deleteEventPayload = Record({
+const DeleteEventPayload = Record({
   nameOfEvent: text,
   ownerOfEvent: Principal,
 });
+
+// Events errors
+const EventsError = Variant({
+  EventDoesNotExist: text,
+  UserDoesNotExist: text,
+  InvalidDetails: text,
+  EventNameIsRequired: text,
+  MustBeOwner: text,
+});
 type EventsError = typeof EventsError.tsType;
 
-//storages
-
+// Storage
 let users = StableBTreeMap<text, User>(0);
-
 let events = StableBTreeMap<text, Event>(1);
+
 /**
- * create a event canister
+ * Create an event canister
  */
 export default Canister({
-  //user register to event app by passing username
-
-  registerUser: update([registerUserPayload], text, (payload) => {
+  // Register user
+  registerUser: update([RegisterUserPayload], Result(text, EventsError), (payload) => {
     const id = generateId();
     if (!payload.username) {
-      return "enter corret username";
+      return Err({ InvalidDetails: "Username is required" });
     }
-    //check if username is already taken
-    const checkUserName = users.get(payload.username).Some;
-    if (checkUserName) {
-      return `username ${payload.username} is already taken try another one`;
+    // Check if username is already taken
+    const checkUserName = users.get(payload.username);
+    if (checkUserName.isSome()) {
+      return Err({ InvalidDetails: `Username ${payload.username} is already taken` });
     }
     const user: User = {
       id,
@@ -115,66 +109,59 @@ export default Canister({
       eventsCreated: [],
     };
     users.insert(payload.username, user);
-    return `${payload.username}user registered successfully`;
+    return Ok(`${payload.username} registered successfully`);
   }),
 
-  //get user profile by passing username
-
+  // Get user profile
   getUserProfile: query(
-    [profilePayLoad],
+    [ProfilePayload],
     Result(Opt(User), EventsError),
     (payload) => {
       if (!payload.user) {
-        return Err({
-          EnterCorrectDetais: payload.user,
-        });
+        return Err({ InvalidDetails: "Username is required" });
       }
-      const returnedUser = users.get(payload.user).Some;
-      if (!returnedUser) {
-        return Err({
-          UserDoesNotExist: payload.user,
-        });
+      const returnedUser = users.get(payload.user);
+      if (!returnedUser.isSome()) {
+        return Err({ UserDoesNotExist: `User ${payload.user} does not exist` });
       }
-      return Ok(users.get(payload.user));
+      return Ok(returnedUser);
     }
   ),
 
-  //user update his profile
-
-  updateUseProfile: update([upadteUserProfilePayload], text, (payload) => {
+  // Update user profile
+  updateUserProfile: update([UpdateUserProfilePayload], Result(text, EventsError), (payload) => {
     if (!payload.userName || !payload.newUserName) {
-      return "provide correct credentials";
+      return Err({ InvalidDetails: "Both current and new usernames are required" });
     }
-    const checkUserName = users.get(payload.newUserName).Some;
-    if (checkUserName) {
-      return `username ${payload.newUserName} is already taken try another one`;
+    const checkNewUserName = users.get(payload.newUserName);
+    if (checkNewUserName.isSome()) {
+      return Err({ InvalidDetails: `Username ${payload.newUserName} is already taken` });
     }
-    const getUser = users.get(payload.userName).Some;
-    if (!getUser) {
-      return `cannot update the ${payload.userName}`;
+    const getUser = users.get(payload.userName);
+    if (!getUser.isSome()) {
+      return Err({ UserDoesNotExist: `User ${payload.userName} does not exist` });
     }
     const updateUser: User = {
-      ...getUser,
+      ...getUser.unwrap(),
       username: payload.newUserName,
     };
     users.insert(payload.newUserName, updateUser);
     users.remove(payload.userName);
-    return `success updated ${payload.userName} profile to ${payload.newUserName}`;
+    return Ok(`Successfully updated profile to ${payload.newUserName}`);
   }),
-  //user delete his profile
 
-  deleteProfile: update([deleteProfilePayload], text, (payload) => {
-    const checkUser = users.get(payload.owner).Some;
-    if (!checkUser) {
-      return `user ${payload.owner} does not exist`;
+  // Delete user profile
+  deleteProfile: update([DeleteProfilePayload], Result(text, EventsError), (payload) => {
+    const checkUser = users.get(payload.owner);
+    if (!checkUser.isSome()) {
+      return Err({ UserDoesNotExist: `User ${payload.owner} does not exist` });
     }
     users.remove(payload.owner);
-    return `user ${payload.owner} has been deleted successfully`;
+    return Ok(`User ${payload.owner} has been deleted successfully`);
   }),
 
-  //create an event
-
-  createEvent: update([EventsPayload], text, (payload) => {
+  // Create event
+  createEvent: update([EventsPayload], Result(text, EventsError), (payload) => {
     if (
       !payload.eventPoster ||
       !payload.nameOfEvent ||
@@ -182,12 +169,12 @@ export default Canister({
       !payload.date ||
       !payload.requirements
     ) {
-      return "Err enter correct credentials";
+      return Err({ InvalidDetails: "All event details are required" });
     }
-    //check if user is already logged in
-    const getUser = users.get(payload.nameOfEvent).Some;
-    if (!getUser) {
-      return "must have registered";
+    // Check if user is registered
+    const getUser = users.get(payload.owner);
+    if (!getUser.isSome()) {
+      return Err({ UserDoesNotExist: "User must be registered" });
     }
     const id = generateId();
     const event: Event = {
@@ -203,66 +190,100 @@ export default Canister({
     };
     events.insert(payload.nameOfEvent, event);
 
-    //update user by adding event to events array that the user created
-
+    // Update user by adding event to eventsCreated array
     const updateUserWithEvents: User = {
-      ...getUser,
-      eventsCreated: [...getUser.eventsCreated, event.nameOfEvent],
+      ...getUser.unwrap(),
+      eventsCreated: [...getUser.unwrap().eventsCreated, payload.nameOfEvent],
     };
     users.insert(payload.owner, updateUserWithEvents);
 
-    return `${payload.nameOfEvent} event created successfully`;
+    return Ok(`${payload.nameOfEvent} event created successfully`);
   }),
 
-  //get all events
-
+  // Get all events
   getAllEvents: query([], Vec(Event), () => {
     return events.values();
   }),
-  //get details of an event
-  getAnEventDetail: query([getEventPayload], Opt(Event), (payload) => {
-    return events.get(payload.nameOfEvent);
+
+  // Get event details
+  getEventDetails: query([GetEventPayload], Result(Opt(Event), EventsError), (payload) => {
+    if (!payload.nameOfEvent) {
+      return Err({ InvalidDetails: "Event name is required" });
+    }
+    const event = events.get(payload.nameOfEvent);
+    if (!event.isSome()) {
+      return Err({ EventDoesNotExist: `Event ${payload.nameOfEvent} does not exist` });
+    }
+    return Ok(event);
   }),
 
-  //delete an event
-
-  deleteEvent: update([deleteEventPayload], text, (payload) => {
-    const getEvent = events.get(payload.nameOfEvent).Some;
-    if (!getEvent) {
-      return `no event with ${payload.nameOfEvent} is available`;
+  // Delete event
+  deleteEvent: update([DeleteEventPayload], Result(text, EventsError), (payload) => {
+    const getEvent = events.get(payload.nameOfEvent);
+    if (!getEvent.isSome()) {
+      return Err({ EventDoesNotExist: `No event with name ${payload.nameOfEvent}` });
     }
 
-    if (payload.ownerOfEvent.toText() === getEvent.id.toText()) {
-      events.remove(payload.nameOfEvent);
-      return `successfully deleted ${payload.nameOfEvent} event`;
+    const event = getEvent.unwrap();
+    if (payload.ownerOfEvent.toText() !== event.owner) {
+      return Err({ MustBeOwner: "Only the owner can delete this event" });
     }
 
-    return `unknow error ocurred`;
+    events.remove(payload.nameOfEvent);
+
+    // Update user by removing the event from eventsCreated array
+    const getUser = users.get(event.owner);
+    if (getUser.isSome()) {
+      const updatedUser: User = {
+        ...getUser.unwrap(),
+        eventsCreated: getUser.unwrap().eventsCreated.filter(e => e !== payload.nameOfEvent),
+      };
+      users.insert(event.owner, updatedUser);
+    }
+
+    return Ok(`Successfully deleted ${payload.nameOfEvent} event`);
   }),
 
-  //book event
-
-  bookEvent: update([bookEventPayload], text, (payload) => {
+  // Book event
+  bookEvent: update([BookEventPayload], Result(text, EventsError), (payload) => {
     if (!payload.eventName || !payload.user) {
-      return "event name and username are both required inorder to book";
+      return Err({ InvalidDetails: "Event name and username are both required to book" });
     }
-    //check if event is already exist
-    const getEvent = events.get(payload.eventName).Some;
-    if (!getEvent) {
-      return `${payload.eventName} event is not available`;
+    // Check if event exists
+    const getEvent = events.get(payload.eventName);
+    if (!getEvent.isSome()) {
+      return Err({ EventDoesNotExist: `Event ${payload.eventName} is not available` });
     }
-    const updateAttendanceOfEvent: Event = {
-      ...getEvent,
-      attendance: [...getEvent.attendance, payload.user],
+    const event = getEvent.unwrap();
+    if (event.attendance.includes(payload.user)) {
+      return Err({ InvalidDetails: `${payload.user} has already booked this event` });
+    }
+    const updatedEvent: Event = {
+      ...event,
+      attendance: [...event.attendance, payload.user],
     };
-    events.insert(updateAttendanceOfEvent.owner, updateAttendanceOfEvent);
+    events.insert(payload.eventName, updatedEvent);
 
-    return `you have successfully book ${payload.eventName}`;
+    return Ok(`Successfully booked ${payload.eventName}`);
+  }),
+
+  // Check user registration status
+  isUserRegistered: query([ProfilePayload], Result(bool, EventsError), (payload) => {
+    const user = users.get(payload.user);
+    return Ok(user.isSome());
+  }),
+
+  // List user events
+  listUserEvents: query([ProfilePayload], Result(Vec(text), EventsError), (payload) => {
+    const user = users.get(payload.user);
+    if (!user.isSome()) {
+      return Err({ UserDoesNotExist: `User ${payload.user} does not exist` });
+    }
+    return Ok(user.unwrap().eventsCreated);
   }),
 });
 
-//function to generate Principals ids
-
+// Function to generate Principal IDs
 function generateId(): Principal {
   const randomBytes = new Array(29)
     .fill(0)
