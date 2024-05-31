@@ -1,0 +1,11 @@
+{
+  "canisters": {
+    "ebusiness_center": {
+      "type": "custom",
+      "main": "src/index.ts",
+      "build": "npx azle ebusiness_center",
+      "candid": "src/index.did",
+      "wasm": ".azle/ebusiness_center/ebusiness_center.wasm"
+    }
+  }
+}

@@ -1,0 +1,35 @@
+{
+    "name": "ebusiness_center",
+    "version": "0.0.1",
+    "description": "E-Business canister built on the Internet Computer Protocol",
+    "author": "Samuel Gichuki",
+    "homepage": "https://github.com/7144samuelG/icp_ebusiness_center#readme",
+    "bugs": "https://github.com/7144samuelG/icp_ebusiness_center/issues",
+    "license": "MIT",
+    "private": false,
+    "scripts": {
+        "clean": "rm -rf .azle .dfx node_modules",
+        "dfx_install": "DFX_VERSION=0.15.1 sh -ci \"$(curl -fsSL https://sdk.dfinity.org/install.sh)\"",
+        "replica_start": "dfx start --background --clean",
+        "replica_stop": "dfx stop",
+        "create_identities": "dfx identity new owner && dfx identity new employee && dfx identity new user1 && dfx identity new user2",
+        "remove_identities": "dfx identity remove owner && dfx identity remove employee && dfx identity remove user1 && dfx identity remove user2",
+        "canister_deploy_local": "dfx deploy ebusiness_center --identity owner",
+        "canister_deploy_mainnet": "dfx deploy --network ic ebusiness_center",
+        "canister_uninstall": "dfx canister uninstall-code ebusiness_center --identity owner",
+        "canister_call": "dfx canister call ebusiness_center",
+        
+        "canister_setup": "npm i && npm run create_identities && npm run replica_start && npm run && npm run canister_deploy_local",
+        "clean_state": "(npm run canister_uninstall || true) && (npm run replica_stop || true) && (npm run remove_identities || true) && npm run clean"
+    },
+    "dependencies": {
+        "azle": "0.19.0",
+        "uuid": "^9.0.1"
+    },
+    "devDependencies": {
+        "@types/uuid": "^9.0.7"
+    },
+    "engines": {
+        "node": "^18"
+    }
+}
