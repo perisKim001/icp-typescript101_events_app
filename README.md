@@ -16,13 +16,13 @@ Follow the steps below to set up and run the project locally.
 1. Clone this repository:
 
 ```bash
-git clone https://github.com/7144samuelG/icp_EVENTS_APP
+git clonehttps://github.com/perisKim001/icp-typescript101_events_app
 ```
 
 2. Navigate to the project directory:
 
 ```bash
-cd icp_EVENTS_APP
+cd icp-typescript101_events_app
 ```
 
 3. `dfx` is the tool you will use to interact with the IC locally and on mainnet. If you don't already have it installed:
