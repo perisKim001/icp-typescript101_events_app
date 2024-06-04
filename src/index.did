@@ -1,11 +1,12 @@
 service: () -> {
     bookEvent: (record {user:text; eventName:text}) -> (text);
     createEvent: (record {locationOfEvent:text; owner:text; date:text; nameOfEvent:text; eventPoster:text; requirements:text}) -> (text);
-    deleteEvent: (record {nameOfEvent:text; ownerOfEvent:principal}) -> (text);
+    deleteEvent: (record {username:text; nameOfEvent:text; ownerOfEvent:principal}) -> (text);
     deleteProfile: (record {owner:text}) -> (text);
     getAllEvents: () -> (vec record {id:principal; locationOfEvent:text; owner:text; date:text; nameOfEvent:text; createdAt:nat64; eventPoster:text; attendance:vec text; requirements:text}) query;
     getAnEventDetail: (record {nameOfEvent:text}) -> (opt record {id:principal; locationOfEvent:text; owner:text; date:text; nameOfEvent:text; createdAt:nat64; eventPoster:text; attendance:vec text; requirements:text}) query;
     getUserProfile: (record {user:text}) -> (variant {Ok:opt record {id:principal; username:text; createdAt:nat64; eventsCreated:vec text}; Err:variant {MustBeOwner:text; EventNameIsRequired:text; EnterCorrectDetais:text; UserDoesNotExist:text; EventDoesNotExist:text}}) query;
+    listUserEvents: (record {user:text}) -> (variant {Ok:vec text; Err:variant {MustBeOwner:text; EventNameIsRequired:text; EnterCorrectDetais:text; UserDoesNotExist:text; EventDoesNotExist:text}}) query;
     registerUser: (record {username:text}) -> (text);
-    updateUseProfile: (record {userName:text; newUserName:text}) -> (text);
+    updateUserProfile: (record {userName:text; newUserName:text}) -> (text);
 }

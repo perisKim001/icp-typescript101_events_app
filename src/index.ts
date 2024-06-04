@@ -84,6 +84,7 @@ const EventsError = Variant({
 const deleteEventPayload = Record({
   nameOfEvent: text,
   ownerOfEvent: Principal,
+  username:text
 });
 type EventsError = typeof EventsError.tsType;
 
@@ -101,9 +102,9 @@ export default Canister({
   registerUser: update([registerUserPayload], text, (payload) => {
     const id = generateId();
     if (!payload.username) {
-      return "enter corret username";
+      return "username is required";
     }
-    //check if username is already taken
+    //check if username is already registerd
     const checkUserName = users.get(payload.username).Some;
     if (checkUserName) {
       return `username ${payload.username} is already taken try another one`;
@@ -141,9 +142,9 @@ export default Canister({
 
   //user update his profile
 
-  updateUseProfile: update([upadteUserProfilePayload], text, (payload) => {
+  updateUserProfile: update([upadteUserProfilePayload], text, (payload) => {
     if (!payload.userName || !payload.newUserName) {
-      return "provide correct credentials";
+      return "some credentails are missing";
     }
     const checkUserName = users.get(payload.newUserName).Some;
     if (checkUserName) {
@@ -184,10 +185,10 @@ export default Canister({
     ) {
       return "Err enter correct credentials";
     }
-    //check if user is already logged in
-    const getUser = users.get(payload.nameOfEvent).Some;
+    //check if user is already registerd
+    const getUser = users.get(payload.owner).Some;
     if (!getUser) {
-      return "must have registered";
+      return "must be registered in order to create your event";
     }
     const id = generateId();
     const event: Event = {
@@ -231,9 +232,20 @@ export default Canister({
     if (!getEvent) {
       return `no event with ${payload.nameOfEvent} is available`;
     }
-
+    const user=users.get(payload.username).Some;
+    if(!user){
+      return `give ${payload.username} is not registered`;
+    }
     if (payload.ownerOfEvent.toText() === getEvent.id.toText()) {
       events.remove(payload.nameOfEvent);
+
+      //delete event from eventcreated by user 
+      
+      const upadtedUser:User={
+        ...user,
+        eventsCreated:user.eventsCreated.filter((val)=>payload.nameOfEvent!==val)
+      }
+      users.insert(upadtedUser.username,upadtedUser);
       return `successfully deleted ${payload.nameOfEvent} event`;
     }
 
@@ -259,6 +271,19 @@ export default Canister({
 
     return `you have successfully book ${payload.eventName}`;
   }),
+  listUserEvents: query(
+    [profilePayLoad],
+    Result(Vec(text), EventsError),
+    (payload) => {
+      const user = users.get(payload.user).Some;
+      if (!user) {
+        return Err({
+          UserDoesNotExist: `user with ${payload.user}does not exist`,
+        });
+      }
+      return Ok(user.eventsCreated);
+    }
+  ),
 });
 
 //function to generate Principals ids
