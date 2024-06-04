@@ -271,6 +271,7 @@ export default Canister({
 
     return `you have successfully book ${payload.eventName}`;
   }),
+  //list events created by user
   listUserEvents: query(
     [profilePayLoad],
     Result(Vec(text), EventsError),
